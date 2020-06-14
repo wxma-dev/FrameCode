@@ -1,0 +1,670 @@
+#include <iostream>
+#include <ctime>
+#include <cstring>
+#include <string>
+#include <cstdio>
+#include <cstdlib>
+#include <fstream>
+#include <iconv.h>
+
+#include "lib_string.h"
+
+using namespace std;
+
+#define OUTLEN 4096
+
+#define __LOG_FLAG__ 1
+
+class CodeConverter {
+    private:
+        iconv_t cd;
+
+    public:
+
+        CodeConverter(const char *from_charset,const char *to_charset) {
+            cd = iconv_open(to_charset,from_charset);
+        }
+       
+        ~CodeConverter() {
+            cout << "delete iconv" << endl;
+            iconv_close(this->cd);
+        }
+       
+        int convert(char *inbuf,size_t inlen,char *outbuf,size_t outlen) {
+            char **pin = &inbuf;
+            char **pout = &outbuf;
+
+            memset(outbuf, 0x00, outlen );
+            return iconv(cd, pin, (size_t *)&inlen, pout, (size_t *)&outlen);
+        }
+};
+
+
+/**
+ *  @brief 报纸的父类
+ *  报纸的基类
+ */
+class CNewspaper
+{
+    public:
+        string sAddress_Internet;   /* 域名地址 */
+        int    iYear_Newspaper;     /* 报纸年份 */
+        int    iMon_Newspaper;      /* 报纸月份 */
+        int    iDate_Newspaper;     /* 报纸月份中的天 */
+        char sDirName_LocaleComputer[4096];/* 报纸存放所在目录名 */
+
+    public:
+        CNewspaper();
+        CNewspaper( int iYear, int iMon, int iDate );
+
+        void setCNewspaperDate( int iYear, int iMon, int iDate );
+};
+
+
+CNewspaper::CNewspaper()
+{
+    /* 获取当日的日期 */
+
+    // 基于当前系统的当前日期/时间
+    time_t now = time(0);
+    tm *ltm = localtime(&now);
+    // 输出 tm 结构的各个组成部分
+    /*
+    cout << "年: "<< 1900 + ltm->tm_year << endl;
+    cout << "月: "<< 1 + ltm->tm_mon<< endl;
+    cout << "日: "<<  ltm->tm_mday << endl;
+    */
+
+    iYear_Newspaper   = 1900 + ltm->tm_year;
+    iMon_Newspaper    = 1 + ltm->tm_mon;
+    iDate_Newspaper   = ltm->tm_mday;
+
+/*
+    this->CNewspaper::CNewspaper(
+        1900 + ltm->tm_year,
+        1 + ltm->tm_mon,
+        ltm->tm_mday );
+*/
+
+    memset( sDirName_LocaleComputer, 0x00, sizeof( sDirName_LocaleComputer ) );
+    sprintf( sDirName_LocaleComputer, "%4.4d-%02.2d-%02.02d", iYear_Newspaper, iMon_Newspaper, iDate_Newspaper );
+
+}
+
+
+CNewspaper::CNewspaper( int iYear, int iMon, int iDate )
+{
+    iYear_Newspaper   = iYear ;
+    iMon_Newspaper    = iMon ;
+    iDate_Newspaper   = iDate;
+
+    memset( sDirName_LocaleComputer, 0x00, sizeof( sDirName_LocaleComputer ) );
+    sprintf( sDirName_LocaleComputer, "%4.4d-%02.2d-%02.02d", iYear_Newspaper, iMon_Newspaper, iDate_Newspaper );
+}
+
+void CNewspaper::setCNewspaperDate( int iYear, int iMon, int iDate )
+{
+    iYear_Newspaper   = iYear ;
+    iMon_Newspaper    = iMon ;
+    iDate_Newspaper   = iDate;
+
+    memset( sDirName_LocaleComputer, 0x00, sizeof( sDirName_LocaleComputer ) );
+    sprintf( sDirName_LocaleComputer, "%4.4d-%02.2d-%02.02d", iYear_Newspaper, iMon_Newspaper, iDate_Newspaper );
+}
+
+
+class CReadNewspaper
+{
+    public:
+        char   sNextRead_Address[4096];     /* 下一个准备阅读的地址 */
+        char   sNextRead_File[4096];        /* 下一个准备阅读的新闻内容放在该文件中 */
+        int    iXh_Bm_Newspaper = 1 ;       /* 阅读到 某版本的第几条新闻 */
+        int    iBm_Newspaper    = 1 ;       /* 阅读到 报纸哪个版面 */
+        int    iFlag_NotFound   = 0;        /* 网页是否有内容的标志，0-无内容，1-有内容 */
+        string sTile_Newspaper;             /* 阅读到的 新闻标题 */
+        string sDate_Newspaper;             /* 阅读到的 新闻的内容 */
+
+    public:
+        CReadNewspaper()
+        {
+            memset( sNextRead_Address, 0x00, sizeof( sNextRead_Address ) );
+            memset( sNextRead_File   , 0x00, sizeof( sNextRead_File    ) );
+            iXh_Bm_Newspaper = 1 ;
+            iBm_Newspaper    = 1 ;
+            iFlag_NotFound   = 0 ;
+        }
+
+        /*
+            获取某一个地址版面的内容，放在文件中
+            @in:    sAddress  版本地址 
+                    sFileName 版本内容放入哪个文件文件
+            @return -1 失败
+                    0  成功
+        */
+        int Get_Something_NewspaperAdreess_ToFile( char * sAddress, char * sFileName )
+        {
+            char  aczShellCmd[4096];
+            memset( aczShellCmd, 0x00, sizeof(aczShellCmd));
+
+            if ( NULL == sAddress || NULL == sFileName )
+            {
+                return  -1;
+            }
+
+            /* unix方法 */
+            memset( aczShellCmd, 0x00, sizeof(aczShellCmd) );
+            sprintf( aczShellCmd , "wget %s -O %s", sAddress, sFileName );
+
+            cout << aczShellCmd << endl;
+
+            int iRet = system( aczShellCmd );
+            if( iRet >> 8 != 0 )
+            {
+                printf( "system error, aczShellCmd=[%s]\n", aczShellCmd );
+                return -1;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+#if 0
+        int Get_Something_NewspaperAdreess_ToFile( char * sAddress )
+        {
+            return Get_Something_NewspaperAdreess_ToFile( sAddress, this->sNextRead_File );
+        }
+
+        int Get_Something_NewspaperAdreess_ToFile( char * sFileName )
+        {
+            return Get_Something_NewspaperAdreess_ToFile( this->sNextRead_Address, sFileName );
+        }
+#endif
+        int Get_Something_NewspaperAdreess_ToFile( )
+        {
+            return Get_Something_NewspaperAdreess_ToFile( this->sNextRead_Address, this->sNextRead_File );
+        }
+};
+
+/**
+ *  @brief 人民日报
+ *  人民日报的地址
+ *  【新闻搜集系统】
+ *  真实的ip:
+ *  http://paper.people.com.cn/rmrb/html/2018-07/31/nw.D110000renmrb_20180731_1-01.htm
+ *
+ *  解析获取：
+ *  http://paper.people.com.cn/rmrb/html/2018-07/31/nw.D110000renmrb_20180731_${某版本的第几条新闻}-${版面序号}.htm
+ *
+ *  使用boost库，来进行开发，不管是哪个平台都没有问题的。
+ *
+ *  新闻搜索
+ */
+class CReadNewspaper_RMRB: public CReadNewspaper
+{
+    public:
+        CNewspaper rmrb;
+
+    public:
+        /*
+            获取下一版面的地址
+            返回string类型的 下一版面的地址
+        */
+        string Get_NextReading_NewspaperAdreess()
+        {
+            string sAddress_Newspaper_Tmp;
+            char   sBuf_Tmp[4096];
+
+            memset( sBuf_Tmp, 0x00, sizeof( sBuf_Tmp ) );
+
+            sprintf( sBuf_Tmp, 
+                   "http://paper.people.com.cn/rmrb/html/%4.4d-%02.2d/%02.2d/nw.D110000renmrb_%4.4d%02.2d%02.2d_%d-%02.2d.htm", 
+                   rmrb.iYear_Newspaper,  rmrb.iMon_Newspaper, rmrb.iDate_Newspaper, 
+                   rmrb.iYear_Newspaper,  rmrb.iMon_Newspaper, rmrb.iDate_Newspaper,
+                   this->iXh_Bm_Newspaper, this->iBm_Newspaper );
+
+            sAddress_Newspaper_Tmp = sBuf_Tmp;
+            memset( this->sNextRead_Address, 0x00, sizeof( this->sNextRead_Address ) );
+            memcpy( this->sNextRead_Address, sBuf_Tmp, strlen( sBuf_Tmp ) );
+            return sAddress_Newspaper_Tmp;
+        }
+
+        string Get_NextReading_File()
+        {
+            string sTmp;
+            char   sBuf_Tmp[4096];
+
+            memset( sBuf_Tmp, 0x00, sizeof( sBuf_Tmp ) );
+
+            sprintf( sBuf_Tmp, 
+                   "D110000renmrb_%4.4d%02.2d%02.2d_%d-%02.2d.htm", 
+                   rmrb.iYear_Newspaper,  rmrb.iMon_Newspaper, rmrb.iDate_Newspaper,
+                   this->iXh_Bm_Newspaper, this->iBm_Newspaper );
+
+            sTmp = sBuf_Tmp;
+            memset( this->sNextRead_File, 0x00, sizeof( this->sNextRead_File ) );
+            memcpy( this->sNextRead_File, sBuf_Tmp, strlen( sBuf_Tmp ) );
+            return sTmp;
+        }
+
+        /* 过滤新闻标题 */
+        void Filter_Tile_Newspaper()
+        {
+            if ( "" == this->sTile_Newspaper )
+            {
+                return ;
+            }
+
+            /* 举例:
+            <h1>积极进取，引领中国经济行稳致远</h1>
+            */
+            int iPos_Tmp = (this->sTile_Newspaper).find("<h1>"); 
+            if ( iPos_Tmp != std::string::npos )
+            {
+                this->sTile_Newspaper = (this->sTile_Newspaper).replace( (this->sTile_Newspaper).find("<h1>"), strlen("<h1>"), "" );
+            }
+            else
+            {
+                cout << "新闻标题有异常:[" << this->sTile_Newspaper << "]" << endl;
+            }
+
+            iPos_Tmp = (this->sTile_Newspaper).find("</h1>"); 
+            if ( iPos_Tmp != std::string::npos )
+            {
+                this->sTile_Newspaper = (this->sTile_Newspaper).replace( (this->sTile_Newspaper).find("</h1>"), strlen("</h1>"), "" );
+            }
+            else
+            {
+                cout << "新闻标题有异常:[" << this->sTile_Newspaper << "]" << endl;
+            }
+            
+        
+        }
+        
+        /* 过滤新闻内容 */
+        void Filter_Date_Newspaper()
+        {
+            if ( "" == this->sDate_Newspaper )
+            {
+                return ;
+            }
+
+            /* 举例:
+            <!--enpcontent--><p>　　历史只会眷顾坚定者、奋进者、搏击者。向高质量发展阶段迈进，唯改革创新者强，唯积极进取者胜。</p><p>　　日前召开的中共中央政治局会议，科学总结今年以来经济总体平稳、稳中向好的态势，深入分析经济运行稳中有变的形势，对做好下半年经济工作提出明确要求。这些重大判断和重要部署，对于坚定全党全国各族人民信心和决心，引领中国经济行稳致远，具有十分重要的意义。</p><p>　　引领中国经济行稳致远，我们有信心和决心。今年上半年，我国经济运行稳中向好态势持续发展，第三产业增加值占国内生产总值的比重达54.3%、服务业对经济增长的贡献率达60.5%、最终消费支出对经济增长的贡献率达78.5%……经济大盘“稳”、结构调整“进”、新旧动能转换“亮”、消费升级空间“扩”，迈向高质量发展起步良好。坚决贯彻中共中央政治局会议决策部署，坚持稳中求进工作总基调，在改革开放和结构调整等方面积极进取，我们就能顺利实现经济社会发展目标任务，向高质量发展阶段不断迈进。</p><p>　　引领中国经济行稳致远，我们有底气和定力。党的十八大以来，面对十分复杂的国际形势和艰巨繁重的国内改革发展稳定任务，以习近平同志为核心的党中央提出了适应把握引领经济发展新常态的重大论断，作出我国经济已由高速增长阶段转向高质量发展阶段的重大判断，形成以新发展理念为指导、以供给侧结构性改革为主线的政策体系，有效应对重大挑战、抵御重大风险、克服重大阻力、解决重大矛盾。6年来，经济运行始终保持在合理区间，6000多万贫困人口稳定脱贫，新动能对经济增长的贡献率超过三分之一，推动了多年想实现而没有实现的重大结构性变革，经济社会发展呈现出预期稳、人心稳、大局稳的良好局面，充分说明党中央对经济形势作出的判断、对经济工作作出的决策、对发展思路作出的调整是完全正确的。有党中央的坚强领导，有习近平新时代中国特色社会主义思想的科学引领，我们一定能推动中国经济爬坡过坎、闯关夺隘。</p><p>　　引领中国经济行稳致远，我们有条件和能力。今天的中国，稳居世界第二大经济体，连续多年对世界经济增长贡献率超过30%，拥有13亿多人口的巨大市场和世界最大规模的中等收入群体……总体来看，我国经济发展长期向好的基本面没有变，经济韧性好、潜力足、回旋余地大的基本特征没有变，经济持续增长的良好支撑基础和条件没有变，经济结构调整优化的前进态势没有变，而且正在向形态更高级、分工更优化、结构更合理阶段演进。虽然外部环境发生明显变化，但不会改变经济全球化的历史大势，不会改变我国发展的历史机遇，不会改变我们坚定发展壮大自己的决心。以中国经济持续健康发展的确定性，有效应对世界经济的不确定性，确保实现经济社会发展目标任务，我们有这个条件，也有这个能力。</p><p>　　不安于小成，然后足以成大器；不诱于小利，然后可以立远功。无论潮平岸阔，还是急流险滩，只要我们紧密团结在以习近平同志为核心的党中央周围，在埋头苦干中积聚实力，在积极进取中开拓新局，在改革创新中挖掘潜能，新时代中国经济航船定能战胜各种风险挑战，乘风破浪，行稳致远。</p><!--/enpcontent-->
+            */
+           int iPos_Tmp =  (this->sDate_Newspaper).find("<!--enpcontent--><p>");
+           if ( iPos_Tmp != std::string::npos )
+           {
+               this->sDate_Newspaper = (this->sDate_Newspaper).replace( (this->sDate_Newspaper).find("<!--enpcontent--><p>"), strlen("<!--enpcontent--><p>"), "" );
+           }
+
+           iPos_Tmp =  (this->sDate_Newspaper).find("<!--enpcontent--><P>");
+           if ( iPos_Tmp != std::string::npos )
+           {
+               this->sDate_Newspaper = (this->sDate_Newspaper).replace( (this->sDate_Newspaper).find("<!--enpcontent--><P>"), strlen("<!--enpcontent--><P>"), "" );
+           }
+
+           iPos_Tmp =  (this->sDate_Newspaper).find("</p><!--/enpcontent-->");
+           if ( iPos_Tmp != std::string::npos )
+           {
+               this->sDate_Newspaper = (this->sDate_Newspaper).replace( (this->sDate_Newspaper).find("</p><!--/enpcontent-->"), strlen("</p><!--/enpcontent-->"), "" );
+           }
+
+           iPos_Tmp =  (this->sDate_Newspaper).find("</P><!--/enpcontent-->");
+           if ( iPos_Tmp != std::string::npos )
+           {
+               this->sDate_Newspaper = (this->sDate_Newspaper).replace( (this->sDate_Newspaper).find("</P><!--/enpcontent-->"), strlen("</P><!--/enpcontent-->"), "" );
+           }
+
+            while( 1 )
+            {
+                iPos_Tmp = (this->sDate_Newspaper).find("</p><p>"); 
+                if ( iPos_Tmp != std::string::npos )
+                {
+                    this->sDate_Newspaper = (this->sDate_Newspaper).replace( (this->sDate_Newspaper).find("</p><p>"), strlen("</p><p>"), "\n" );
+                }
+                else
+                {
+                    iPos_Tmp = (this->sDate_Newspaper).find("</P><P>"); 
+                    if ( iPos_Tmp != std::string::npos )
+                    {
+                        this->sDate_Newspaper = (this->sDate_Newspaper).replace( (this->sDate_Newspaper).find("</P><P>"), strlen("</P><P>"), "\n" );
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                /* del by mawx@20180810 未考虑空格，代码去掉
+                if ( sTmp.length() == (this->sDate_Newspaper).length() )
+                {
+                    break;
+                }
+                */
+            }
+        }
+        
+        /*
+            获取新闻的标题、新闻内容，判断有无新闻的内容
+        */
+        int ReadNewsPaper_Date( char * sFileName )
+        {
+            string  data;
+            char  sBuf_Tile[4096];         /* 新闻标题 */
+            int   iPos;
+
+            memset( sBuf_Tile, 0x00, sizeof( sBuf_Tile ) );
+            iPos = 0;
+
+            this->sTile_Newspaper = "";
+            this->sDate_Newspaper = "";
+
+            ifstream infile;
+            infile.open( sFileName );
+            char ch;
+            infile.get(ch);
+            if (infile.eof())
+            {
+                printf( "file[%s] is empty.", sFileName );
+
+                iFlag_NotFound = 0;
+
+                infile.close();
+
+                char sTmp_Cmd[4096];
+                memset( sTmp_Cmd, 0x00, sizeof( sTmp_Cmd ) );
+                sprintf( sTmp_Cmd, "rm -f %s", sFileName );
+                int iRet = system( sTmp_Cmd );
+                if( iRet >> 8 != 0 )
+                {
+                    printf( "system error, sTmp_Cmd=[%s]\n", sTmp_Cmd );
+                }
+
+                return -1;
+                
+            }
+            infile.close();
+
+            // 以读模式打开文件
+            infile.open( sFileName );
+           
+            while (!infile.eof())
+            {
+                data="";
+                infile >> data;
+
+                //pTmp1 = strstr( data,"\<\!\-\-enpcontent\-\-\>" );
+                //if ( NULL != pTmp1 )  /* 匹配到网页有内容 */
+                //{
+                //    iFlag_NotFound = 1;
+                //    break;
+                //}
+                iPos = data.find( "<!--enpcontent-->" ); /* 匹配到网页有内容 */
+                if ( iPos != std::string::npos )
+                {
+                    iFlag_NotFound = 1;
+
+                    /* 新闻内容 */
+                    sDate_Newspaper = data;
+                    this->iXh_Bm_Newspaper++;
+
+                    /* del by mawx@20180810
+                    continue;
+                    */
+                    break;
+                }
+
+                //pTmp2 = strstr( data,"\<h1\>" );
+                //if ( NULL != pTmp2 )  /* 匹配到报文头 */
+                //{
+                //    pTmp = strstr( data,"Not Found" );
+                //    if ( NULL != pTmp )  /* 匹配到"404 Not Found",则认为网页无效 */
+                //    {
+                //        iFlag_NotFound = 0;
+                //        break;
+                //    }
+                //    else /* 匹配到报道的标题 */
+                //    {
+                //        iFlag_NotFound = 1;
+                //        strcpy( sBuf_Tile, data );
+                //        sDate_Newspaper = 
+                //    }
+                //}
+
+                iPos = data.find( "<h1>" ); /* 匹配到报文头 */
+                if ( iPos != std::string::npos )
+                {
+                    iPos = data.find( "Not Found" ); /* 匹配到"404 Not Found",则认为网页无效 */
+                    if ( iPos != std::string::npos )
+                    {
+                        iFlag_NotFound = 0;
+
+                        this->iBm_Newspaper++;
+                        this->iXh_Bm_Newspaper = 1;
+
+                        break;
+                    }
+                    else  /* 匹配到报道的标题 */
+                    {
+                        iFlag_NotFound = 1;
+                        sTile_Newspaper = data;
+                    }
+                }
+            }
+            infile.close();
+
+            /* 过滤数据 */
+            Filter_Tile_Newspaper();
+            Filter_Date_Newspaper();
+
+            char sTmp_Cmd[4096];
+            memset( sTmp_Cmd, 0x00, sizeof( sTmp_Cmd ) );
+            sprintf( sTmp_Cmd, "rm -f %s", sFileName );
+            int iRet = system( sTmp_Cmd  );
+            if( iRet >> 8 != 0 )
+            {
+                printf( "system error, sTmp_Cmd=[%s]\n", sTmp_Cmd );
+            }
+
+            return 0;
+        }
+
+        int ReadNewsPaper_Date()
+        {
+            return ReadNewsPaper_Date(this->sNextRead_File );
+        }
+
+        /* 阅读完今日的整份报纸 */
+        void ReadNewsPaper()
+        {
+            CodeConverter cc = CodeConverter("utf-8","gb2312"); 
+            CodeConverter sc = CodeConverter("utf-8","gb2312"); 
+
+            while ( 1 )
+            {
+                this->Get_NextReading_NewspaperAdreess();
+                this->Get_NextReading_File();
+                if( 0 == this->Get_Something_NewspaperAdreess_ToFile() )
+                {
+                    printf( "news into file succ\n" );
+                }
+
+                if ( -1 == this->ReadNewsPaper_Date() )
+                {
+                    /* 某一个版面第一个序号就是Not Found */
+                    if ( 0 == iFlag_NotFound && 1 == this->iXh_Bm_Newspaper )
+                    {
+                        printf( "[%d]该版本整版下载完成\n", this->iXh_Bm_Newspaper );
+                        return ;
+                    }
+                    else
+                    {
+                        this->iBm_Newspaper++;
+                        this->iXh_Bm_Newspaper = 1;
+                        
+                        /* 继续下一个版本 */
+                        printf( "[%d]该版本整版下载完成\n", this->iXh_Bm_Newspaper );
+                    }
+                    continue;
+                }
+#ifdef _TEST_NEW
+                char * pTmp = NULL, *pTmp2 = NULL;
+                int    iSize_New = 0;
+
+                iSize_New =  2 * ((this->sTile_Newspaper).length() + 1 );
+                pTmp = new char[ iSize_New ];
+                pTmp2= new char[ iSize_New ];
+                memset( pTmp , 0x00, iSize_New );
+                memset( pTmp2, 0x00, iSize_New );
+#else
+                char   pTmp[40960];
+                char   pTmp2[40960];
+                size_t iSize_New = 0;
+
+                iSize_New =  4096;
+
+                memset( pTmp , 0x00, sizeof( pTmp ) );
+                memset( pTmp2, 0x00, sizeof( pTmp2) );
+#endif
+                for( int i = 0; i < (this->sTile_Newspaper).length(); i++ )
+                {
+                    pTmp[i] = (this->sTile_Newspaper)[i];
+                }
+                cc.convert(pTmp , strlen(pTmp) , pTmp2 , sizeof( pTmp2 ) ); 
+                cout << "utf-8-->gb2312 in=" << pTmp << ",out=" << pTmp2 << endl; 
+
+                // 以写模式打开文件
+                ofstream outfile;
+                sprintf( pTmp2, "%s/%s", rmrb.sDirName_LocaleComputer , pTmp2 );
+                outfile.open( pTmp2 );
+#ifdef _TEST_NEW
+                delete [] pTmp;
+                delete [] pTmp2;
+                pTmp = NULL, pTmp2 = NULL;
+#endif
+
+#ifdef _TEST_NEW
+                size_t    iSize_New3 = 0;
+                iSize_New3 =  2 * ((this->sDate_Newspaper).length() + 1 );
+
+                char * pTmp3 = new char[ iSize_New3 ];
+                char * pTmp4 = new char[ iSize_New3 ];
+
+                memset( pTmp3, 0x00, iSize_New3 );
+                memset( pTmp4, 0x00, iSize_New3 );
+#else
+                char   pTmp3[30 + 1];
+                char   pTmp4[409600];
+                size_t iSize_New3 = 0;
+
+                iSize_New3 =  409600;
+
+                memset( pTmp3, 0x00, sizeof( pTmp3 ) );
+                memset( pTmp4, 0x00, sizeof( pTmp4 ) );
+#endif
+/*
+                for( int i = 0; i < (this->sDate_Newspaper).length(); i++ )
+                {
+                    pTmp3[i] = (this->sDate_Newspaper)[i];
+                }
+
+                sc.convert(pTmp3 , strlen(pTmp3), pTmp4 , sizeof( pTmp4 ) ); 
+                cout << "utf-8-->gb2312 in=" << pTmp3 << ",out=" << pTmp4 << endl; 
+                outfile << pTmp4 << endl;
+*/
+
+                outfile << this->sDate_Newspaper << endl;
+
+                // 关闭打开的文件
+                outfile.close();
+#ifdef _TEST_NEW
+                delete [] pTmp3;
+                delete [] pTmp4;
+                pTmp3 = NULL, pTmp4 = NULL;
+#endif
+#if 1
+                /*  */
+                char sTmp_Cmd[4096];
+                memset( sTmp_Cmd, 0x00, sizeof( sTmp_Cmd ) );
+                sprintf( sTmp_Cmd, "iconv -f utf-8 -t gbk %s -o %s.tmp;cp %s.tmp %s; rm -f %s.tmp", pTmp2, pTmp2, pTmp2, pTmp2, pTmp2 );
+                int iRet = system( sTmp_Cmd );
+                if( iRet >> 8 != 0 )
+                {
+                    printf( "system error, sTmp_Cmd=[%s]\n", sTmp_Cmd );
+                }
+#endif
+
+
+            }
+        }
+};
+
+#if 1
+// main() 是程序开始执行的地方
+int main(int argc, char * argv[])
+{
+
+    CReadNewspaper_RMRB   MyRead;
+    if ( !(argc > 1) )
+    {
+        /* do nothing */
+    }
+    else
+    {
+        char  sYear[10 + 1];
+        char  sMon[10 + 1];
+        char  sData[ 10 + 1 ];
+
+        memset( sYear,  0x00, sizeof(  sYear ) );
+        memset( sMon ,  0x00, sizeof(  sMon  ) );
+        memset( sData , 0x00, sizeof(  sData ) );
+
+        memcpy( sYear,  argv[1], 4 );
+        memcpy( sMon ,  argv[1]+4, 2 );
+        memcpy( sData , argv[1]+4+2, 2 );
+
+        MyRead.rmrb.setCNewspaperDate( atoi(sYear), atoi(sMon), atoi(sData) );
+    }
+
+    MyRead.ReadNewsPaper();
+
+    return 0;
+}
+#endif
+
+
+#if 0
+ int main(int argc, char **argv)
+ {
+   //char *in_utf8 = "姝ｅ?ㄥ??瑁?";
+   //char *in_gb2312 = "正在安装";
+   char  in_utf8[40960];
+   char  in_gb2312[32];            //<------ 经过test，该值最大只能设置为31,否则会core
+   char  out[40960];
+
+   memset( in_utf8,   0x00, sizeof( in_utf8 ) );
+   memset( in_gb2312, 0x00, sizeof( in_gb2312 ) );
+   memset( out,       0x00, sizeof( out ) );
+
+   strcpy( in_utf8 , "姝ｅ?ㄥ??瑁?" );
+   strcpy( in_gb2312 , "正" );
+
+   cout << "length:[" << strlen( in_utf8 ) << "]" << endl;
+   cout << "length:[" << strlen( in_gb2312 ) << "]" << endl;
+
+   // utf-8-->gb2312 
+   CodeConverter cc = CodeConverter("utf-8","gb2312");
+   //cc.convert(in_utf8,strlen(in_utf8),out,OUTLEN);
+   cc.convert( in_utf8, strlen(in_utf8), out, 40960 );
+   cout << "utf-8-->gb2312 in=" << in_utf8 << ",out=" << out << endl;
+
+   //memset( out, 0x00, sizeof( out ) );
+   
+   // gb2312-->utf-8 
+   CodeConverter cc2 = CodeConverter("gb2312","utf-8");
+   cc2.convert(in_gb2312,strlen(in_gb2312),out,400);
+   cout << "gb2312-->utf-8 in=" << in_gb2312 << ",out=" << out << endl;
+
+}
+
+#endif

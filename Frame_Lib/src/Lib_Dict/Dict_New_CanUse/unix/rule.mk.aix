@@ -1,0 +1,104 @@
+
+.SUFFIXES: .pc .c .o
+.c.o:
+	$(CC) $(CFLAGS) -c $<
+
+.pc.c:
+	$(PROC) $(PROC_INCLUDE) $<
+	$(RM) -f $(<:.pc=.lis)
+
+.lib:$(LIBS)
+	$(MD) -p $(PROJECTDIR)/.lib; \
+	if [ -n "$(LIBS)" ]; then \
+		for lib in $(LIBS); \
+		do \
+			$(LN) -sf `pwd`/$$lib $(PROJECTDIR)/.lib; \
+		done; \
+	fi
+
+.bin:$(BINS)
+
+clean:
+	set -e; \
+	if [ -n "$(OBJS)" ]; then \
+		for obj in $(OBJS); \
+		do \
+			no_suff=`echo $${obj}|awk -F . '{print $$1}'`; \
+			if [ -e $${no_suff}.pc ] ; then \
+				$(RM) -f $${no_suff}.c $${no_suff}.lis; \
+			fi; \
+			$(RM) -f $${obj}; \
+		done; \
+	fi
+	if [ -n "$(BINS)" ] ; then \
+		$(RM) -f $(BINS); \
+	fi
+	if [ -n "$(LIBS)" ] ; then \
+		$(RM) -f $(LIBS); \
+	fi
+
+check_depend:
+	@set +e; grep "^# DO NOT DELETE THIS LINE" Makefile > /dev/null 2>&1; \
+	if [ $${?} -eq 1 ] ; then \
+		echo; \
+		echo "please run \"make depend\" first."; \
+		echo; \
+		exit 1; \
+	fi
+
+depend:depend_clean
+	$(CP) Makefile Makefile.new
+	echo "# DO NOT DELETE THIS LINE -- make depend depends on it.\n" \
+		>> Makefile.new
+	set +e; \
+	for obj in $(OBJS); \
+	do \
+		pc=`echo $${obj}|awk -F . '{print $$1".pc"}'`; \
+		c=`echo $${obj}|awk -F . '{print $$1".c"}'`; \
+		dep=`echo $${obj}|awk -F . '{print $$1".u"}'`; \
+		if [ -e $${pc} ] ; then \
+			$(CP) $${pc} $${c}; \
+		fi; \
+		$(CC) -M -I$(PREFIX)/include $(CFLAGS) $${c} 2>/dev/null; \
+		if [ -e $${pc} ] ; then \
+			sed s/$${c}/$${pc}/ $${dep} >> Makefile.new; \
+			$(RM) -f $${c}; \
+		else \
+			cat $${dep} >> Makefile.new; \
+		fi; \
+		$(RM) -f $${obj} $${dep}; \
+	done
+	$(RM) -f a.out
+	$(MV) Makefile.new Makefile
+
+
+depend_clean:
+	sed '/^# DO NOT DELETE THIS LINE/,$$d' Makefile > Makefile.new
+	$(MV) Makefile.new Makefile
+
+realclean:depend_clean clean
+
+install:
+	if [ -n "$(LIBS)" ] ; then \
+		$(MD) -p $(PREFIX)/lib; \
+		$(CP) $(LIBS) $(PREFIX)/lib/; \
+	fi; \
+	if [ -n "$(BINS)" ] ; then \
+		$(MD) -p $(PREFIX)/bin; \
+		$(CP) $(BINS) $(PREFIX)/bin/; \
+	fi
+
+uninstall:
+	for lib in "" $(LIBS); \
+	do \
+		if [ -n "$${lib}" ] ; then \
+			$(RM) -f $(PREFIX)/lib/$${lib}; \
+		fi \
+	done; \
+	for bin in "" $(BINS); \
+	do \
+		if [ -n "$${bin}" ]; then \
+			$(RM) -f $(PREFIX)/bin/$${bin}; \
+		fi \
+	done
+

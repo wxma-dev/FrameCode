@@ -1,0 +1,30 @@
+/************************************************************
+* Copyright (c)   2011 xxxxxxxxxxxxxxxxxxxxxx               *
+* Source File:    Application.c                             *
+* Description:    应用开发                                  *
+*           (1)寻找任务，并将任务添加到管道中               *
+*           (2)解析任务，执行任务                           *
+*           (3)以上2个部分的，使用的任务的结构体在此文件中定义*
+*           比如，在epoll解析网络上的任务，添加到管道中；   *
+            网络上的任务，在本机上需要进行的操作            *
+* Author:         mawx                                      *
+* Create Date:    2017.06.30                                *
+*-----------------------------------------------------------*
+* Modify Date:    YYYY-MM-DD                                *
+* Modifier:                                                 *
+* Modify Note:    XXXXXXXXXXXXXX                            *
+* **********************************************************/
+#include "Application.h"
+
+
+int DoWork_Appliction( void * pPoint )
+{
+	St_Work * pPoint_Work;
+	
+	pPoint_Work = NULL;
+	
+	pPoint_Work = ( St_Work * )pPoint;
+	
+	printf( "%s\n", pPoint_Work->sBuf );
+	
+}

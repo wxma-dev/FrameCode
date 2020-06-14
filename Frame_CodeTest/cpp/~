@@ -1,0 +1,30 @@
+#include<iostream>
+using namespace std;
+ 
+template<class T>
+class Operate{
+    public:
+    static T add(T a,T b){
+        return a+b;
+    }
+    static T Mul(T a,T b){
+        return a*b;
+    }
+    static T Judge(T a,T b=1){
+        if(a>=0)
+        return a;
+        else
+        return a/b;
+    }
+};
+int main(){
+    int a,b,c,d,e,x,y,z;
+    a=1,b=2,c=3,d=4,e=5;
+    x=Operate<int>::add(a,b);
+    y=Operate<int>::Mul(c,d);
+    z=Operate<int>::Judge(e,b);
+    cout<<x<<" "<<y<<" "<<z<<" "<<endl;
+    y=Operate<double>::Mul(1.11,2.1);
+    cout<<x<<" "<<y<<" "<<z<<" "<<endl;
+    return 0;
+}

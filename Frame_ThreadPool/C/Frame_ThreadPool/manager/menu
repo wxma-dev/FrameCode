@@ -1,0 +1,52 @@
+#!/bin/bash
+#本脚本实现基本的界面化，具体的功能点需要在其他的脚本中添加，并source进来。
+
+
+#将子菜单的shell内存source进来
+source Thread_Pool_Set.sh
+source Add_Work_Call_Set.sh 
+source Do_Work_Call_Set.sh
+source Conf_Check_Effect.sh
+source Thread_Pool_Operate.sh
+source Monitor.sh
+source Clear.sh
+
+
+#显示主界面
+function Show_Main_Menu()
+{
+echo "
+|-------------------------------------------------------------------------------------|
+| Option |         Name        |    For Main Menu                                     |
+|--------|---------------------|------------------------------------------------------|
+|   1    |    Thread Pool Set  |    线程池相关的设置                                  |
+|   2    |  Add Work Call Set  |    添加工作的回调函数设置                            |
+|   3    |   Do Work Call Set  |    执行工作的回调函数设置                            |
+|   4    |  Conf Check/Effect  |    配置的检查/生效                                   |
+|   5    | Thread Pool Operate |    线程池的相关操作（编译、安装、启动、关闭等）      |
+|   6    |        Monitor      |    监控的显示                                        |
+|   7    |        Clear        |    清理的相关操作（日志等）                          |
+|   q    |        Exit         |    退出主界面                                        |
+|-------------------------------------------------------------------------------------|
+注:(1)若您键入非Option的选项，则默认刷新本菜单界面。
+   (2)1/2/3/4均为启动框架的准备，5为启动线程，若要停止该框架，则亦为5；
+"
+}
+
+clear;
+Show_Main_Menu;
+while printf "Please enter a number or a name for the action you wish: " 
+read n
+do
+	case $n in
+		1)Thread_Pool_Set;;
+		2)Add_Work_Call_Set;; 
+		3)Do_Work_Call_Set;;
+		4)Conf_Check_Effect;;
+		5)Thread_Pool_Operate;;
+		6)Monitor;;
+		q)exit 0;;
+		*)clear;Show_Main_Menu;;
+	esac
+done
+

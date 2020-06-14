@@ -1,0 +1,11 @@
+[DEBUG][Frame_SocketRecv.c:85][main]    初始化日志成功
+[DEBUG][Frame_SocketRecv.c:107][main]    gstYlCfg.ip=[10.242.134.75], gstYlCfg.port=[50509], gstYlCfg.shmkey=[149999], gstYlCfg.msgrecvid=[149998], gstYlCfg.msgsendid=[149999], gstYlCfg.msgsendidnet=[149997].
+[DEBUG][Frame_SocketRecv.c:110][main]    fork process
+[DEBUG][Frame_SocketRecv.c:128][make_child]    daemon process sucess
+[DEBUG][Frame_SocketRecv.c:131][make_child]    start open msg queue
+[DEBUG][Frame_SocketRecv.c:138][make_child]    end open msg queue, msgsendid=[149999] ,iQidReq=[0]
+[DEBUG][Frame_SocketRecv.c:140][make_child]    start open msg queue
+[DEBUG][Frame_SocketRecv.c:147][make_child]    end open msg queue, msgsendidnet=[149997] ,iQidRespNet=[32769]
+[DEBUG][Frame_SocketRecv.c:149][make_child]    Start Open port [50509]...
+[DEBUG][Frame_SocketRecv.c:156][make_child]    start listen ... port=[50509]
+[DEBUG][Frame_SocketRecv.c:375][ExitHandler]    close SIG[11]!

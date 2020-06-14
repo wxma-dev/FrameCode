@@ -1,0 +1,19 @@
+
+BIN_NAME=`pwd'
+
+TARGET = bin_
+
+SRC = ${wildcard *.c}
+APPOBJLIST = ${patsubst %.c,%.o, $(SRC)}
+CFLAGS = -g -Wall
+
+all: $(APPOBJLIST) 
+
+$(APPOBJLIST): %.o: %.c
+	$(CC) $(CFLAGS) -c $^ -o $@ 
+
+clean:
+	$(RM) $(APPOBJLIST)
+
+.PHONY:all clean
+

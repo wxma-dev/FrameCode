@@ -1,0 +1,41 @@
+#!/usr/bin/perl
+
+use Getopt::Long;
+use File::Copy;
+use Cwd;
+
+my $pwd = &Cwd::cwd();
+my $env="unix/env.mk";
+my $rule="unix/rule.mk";
+my $help;
+my $prefix;
+
+GetOptions('help|h' => \$help, 'prefix|p=s' => \$prefix );
+
+if($help == 1)
+{
+	print "Usage: $0 [--help | --prefix=PREFIX]\n";
+	print "	--help			display this help and exit\n";
+	print "	--prefix=PREFIX		install file in PREFIX\n";
+	print "				[/usr/local]\n";
+	exit;
+}
+
+if($prefix eq undef or $prefix eq "") { $prefix = "/usr/local"; }
+
+open my $in, '<', $env . "." . $^O or die "Can't read env template file: $!";
+open my $out, '>', $env or die "Can't create env file: $!";
+
+while ( <$in> )
+{
+	s/^PROJECTDIR=(.*)$/PROJECTDIR=$pwd/g;
+	s/^PREFIX=(.*)$/PREFIX=$prefix/g;
+	print $out $_;
+}
+
+copy($rule . "." . $^O, $rule) or die "Can't generate rule file: $!";
+
+print "\n";
+print "PROJECTDIR=$pwd\n";
+print "PREFIX=$prefix\n";
+print "\n";

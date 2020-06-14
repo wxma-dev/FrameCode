@@ -1,0 +1,14 @@
+[DEBUG][Frame_SocketSend.c:88][main]    初始化日志成功
+[DEBUG][Frame_SocketSend.c:110][main]    gstYlCfg.ip=[10.242.134.75], gstYlCfg.port=[50509], gstYlCfg.shmkey=[149999], gstYlCfg.msgrecvid=[149998], gstYlCfg.msgsendid=[149999], gstYlCfg.msgsendidnet=[149997].
+[DEBUG][Frame_SocketSend.c:113][main]    fork process
+[DEBUG][Frame_SocketSend.c:156][make_child]    daemon process sucess
+[DEBUG][Frame_SocketSend.c:159][make_child]    start open msg queue
+[DEBUG][Frame_SocketSend.c:166][make_child]    end open msg queue, msgrecvid=[149998] ,iQidReq=[65538]
+[DEBUG][Frame_SocketSend.c:168][make_child]    Tcp Connect to [10.242.134.75:50509]
+[DEBUG][Frame_SocketSend.c:186][make_child]    Connect to [10.242.134.75:50509] ok
+[DEBUG][Frame_SocketSend.c:210][CONNWOR]    send_test_msg succ!
+[DEBUG][Frame_SocketSend.c:215][CONNWOR]    start work
+[ERROR][Frame_SocketSend.c:329][send_test_msg]    send zero test buf to pay err! 
+[ERROR][Frame_SocketSend.c:262][CONNWOR]    send_test_msg err!
+[ERROR][Frame_SocketSend.c:181][make_child]    Connect to failed[-2302] [10.242.134.75:50509] 
+[ERROR][Frame_SocketSend.c:181][make_child]    Connect to failed[-2302] [10.242.134.75:50509] 

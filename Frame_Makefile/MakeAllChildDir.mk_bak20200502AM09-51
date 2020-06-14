@@ -1,0 +1,151 @@
+
+
+#功能：
+#1、编译当前目录的源文件，编译成静态库、动态库文件
+#2、执行当前目录的子目录的makefile，编译成静态库、动态库文件
+#3、集合1/2的.o文件，编译成一个总的静态库、动态库文件
+
+
+#注意：
+#1、该Makefile先编译子目录，在编译当前目录
+#2、若子目录下的编译 依赖当前目录的动态库，则如下makefile不适用
+#3、该makefile只规定了编译规格的make all、make clear 格则，其他的make install格式，需在具体的makefile中具体规定
+
+
+#用法:
+#在具体的makefile安装如下格式引用即可
+#    PATH_MAKEALLCHILDDIR = ../../../Frame_Makefile               #MakeAllChildDir.mk所在的目录
+#    include $(PATH_MAKEALLCHILDDIR)/MakeAllChildDir.mk           #直接引用
+#    .PHONY:all clean
+
+
+#################################################################################################
+
+#列举当前目录的子目录
+SUBDIRS = $(shell find . -maxdepth 1 -type d | grep -v 'bin' | grep -v 'lib' | grep -v 'include' | grep -v 'conf' | sed -n '2,$$p' )
+
+#编译子目录
+define make_subdir
+ @for subdir in $(SUBDIRS) ; do \
+  if [ -f $$subdir/Makefile -o -f $$subdir/makefile ];then \
+   ( echo $$subdir && cd $$subdir && make $1) \
+  fi; \
+ done;
+endef
+
+#获取当前目录名
+LOCAL_DIR_NAME = $(shell basename $(shell pwd))
+
+#当前目录下编译的lib存在目录，注意比较
+LOCAL_LIB_DIR = .
+
+#以当前目录名作为lib名
+LOCAL_LIBLIST_SO = $(LOCAL_LIB_DIR)/lib$(LOCAL_DIR_NAME).so
+LOCAL_LIBLIST_A  = $(LOCAL_LIB_DIR)/lib$(LOCAL_DIR_NAME).a
+
+#集合的动态库、静态库
+LOCAL_PUB_LIBLIST_SO = $(LOCAL_LIB_DIR)/libPUB$(LOCAL_DIR_NAME).so
+LOCAL_PUB_LIBLIST_A  = $(LOCAL_LIB_DIR)/libPUB$(LOCAL_DIR_NAME).a
+
+#获取当前目录下的.o文件
+LOCAL_SRC = ${wildcard *.c}
+LOCAL_OBJ = ${patsubst %.c, %.o, $(LOCAL_SRC)}
+
+#当前目录下要清理的文件
+LOCAL_CLEAN_FILES = ${LOCAL_OBJ} $(LOCAL_LIBLIST_SO) $(LOCAL_LIBLIST_A) $(LOCAL_PUB_LIBLIST_SO) $(LOCAL_PUB_LIBLIST_A)
+
+
+#编译当前目录
+define make_dir
+  @if [ -f Makefile -o -f makefile ];then \
+    if [ -f *.c ];then \
+      ( make $(join local_make_ , $1 ) ); \
+    fi; \
+  fi
+endef
+
+#链接当前目录，所有子目录下的对象文件
+#1、若当前目录有makefile文件，则继续编译
+#2、循环判断当前目录的子目录下是否有makefile文件，
+#       有则将该子目录下所有的.o文件列表取出
+define link_StaticLib_To_DynamicLib
+  @if [ -f Makefile -o -f makefile ];then \
+    CHILDDIRNAME=`find . -maxdepth 1 -type d | grep -v 'bin' | grep -v 'lib' | grep -v 'include' | grep -v 'conf' | sed -n '2,$$p'`; \
+    GetPwd=`pwd` && PUBLibName=`basename $$GetPwd`; \
+    echo 3-$(SUBDIRS); \
+    for subdir in $(SUBDIRS) ; do \
+      if [ -f $$subdir/Makefile -o -f $$subdir/makefile ];then \
+        echo 4- ; \
+        GETA=`ls $$subdir/*.a`; \
+        if [ $$? -eq 0 ];then \
+          CHILD_DIR_A_LIST=$$CHILD_DIR_A_LIST" "$$GETA ; \
+        else \
+          echo "error: not find .a file"; \
+        fi; \
+        GETOBJ=`ls $$subdir/*.o`; \
+        if [ $$? -eq 0 ];then \
+          CHILD_DIR_OBJ_LIST=$$CHILD_DIR_OBJ_LIST" "$$GETOBJ ; \
+        else \
+          echo "error: not find .o file"; \
+        fi; \
+      fi; \
+    done; \
+    echo 1-$${#CHILDDIRNAME}; \
+    echo 2-$$CHILDDIRNAME; \
+    if [ $${#CHILDDIRNAME} -gt 0 ];then \
+      echo $(join PUB, $$PUBLibName , ".so" ); \
+      echo $(join PUB, $$PUBLibName , ".a" ); \
+      gcc -shared -o $(join PUB, $$PUBLibName , ".so" ) -Wl,--whole-archive $$CHILD_DIR_A_LIST  -Wl,--no-whole-archive; \
+      ar rc $(join PUB, $$PUBLibName , ".a" ) $$GETOBJ; \
+    else \
+      echo "info: `pwd` not have child dir,so don't create pub lib"; \
+    fi; \
+  fi
+endef
+
+
+
+
+#编译子目录调用
+all:
+	$(call make_subdir , all)
+	$(call make_dir , all)
+	$(call link_StaticLib_To_DynamicLib)
+
+debug:
+	$(call make_subdir , debug)
+
+clean:
+	$(call make_subdir , clean)
+	$(call make_dir , clean)
+
+#当前目录下all规则
+local_make_all:$(LOCAL_OBJ) $(LOCAL_LIBLIST_SO) $(LOCAL_LIBLIST_A)
+
+#当前目录下.o对象文件规则
+$(LOCAL_OBJ): %.o: %.c
+	$(CC) -c -fPIC $^ -o $@
+
+#当前目录下动态库规则
+$(LOCAL_LIBLIST_SO):
+	$(CC) -shared -fPIC -o $(LOCAL_LIBLIST_SO) $(LOCAL_OBJ)
+
+#当前目录下静态库规则
+$(LOCAL_LIBLIST_A):
+	ar rcs $(LOCAL_LIBLIST_A) $(LOCAL_OBJ)
+
+#当前目录下清理文件
+local_make_clean:
+	$(RM) $(LOCAL_CLEAN_FILES) 
+
+
+link_obj_all:
+	gcc -shared -o c.so -Wl,--whole-archive a.a b.a -Wl,--no-whole-archive
+
+
+.PHONY:all clean
+
+.PHONY:local_make_all local_make_clean
+#################################################################################################
+
+
